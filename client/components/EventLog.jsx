@@ -51,7 +51,11 @@ export default function EventLog({ events }) {
     }
 
     eventsToDisplay.push(
-      <Event key={event.event_id} event={event} timestamp={event.timestamp} />,
+      <Event
+        key={event.event_id}
+        event={event}
+        timestamp={new Date().toLocaleTimeString()}
+      />,
     );
   });
 

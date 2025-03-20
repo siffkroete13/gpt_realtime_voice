@@ -60,5 +60,5 @@ app.use("*", async (req, res, next) => {
 });
 
 app.listen(port, () => {
-  console.log(`Express server running on *:${port}`);
+  console.log(`✓ Express server running on *:${port}`);
 });

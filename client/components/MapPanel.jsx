@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import WeatherMap from './Map';
 
-function MapCallOutput({ mapCallOutput }) {
+function MapCallOutput({ mapCallOutput, sendClientEvent}) {
   const [marker, setMarker] = useState(null);
   const [coords, setCoords] = useState(null);
 
-  async function Weather({ lat, lng, location }) {
+  async function Weather({ lat, lng, location, sendClientEvent}) {
     try {
       setMarker({ lat, lng, location });
       setCoords({ lat, lng, location });
@@ -31,8 +31,31 @@ function MapCallOutput({ mapCallOutput }) {
           units: json.current_units?.wind_speed_10m ?? "",
         },
       });
+
+      
+      sendClientEvent({
+        type: "conversation.item.create",
+        item: {
+          type: "message",
+          role: "system", 
+          content: [
+            {
+              type: "input_text",
+              text: `The weather at ${location} is as follows: Temperature: ${json.current?.temperature_2m} ${json.current_units?.temperature_2m}, Wind Speed: ${json.current?.wind_speed_10m} ${json.current_units?.wind_speed_10m}.`
+            },
+          ],
+        },
+      });
+
+      sendClientEvent({
+        type: "response.create",
+        response: {
+          instructions: "Describe the weather results provided.",
+        },
+      });
+
     } catch (error) {
-      console.error("Weather API Error:", error);
+      console.error("〤 Weather API Error:", error);
     }
   }
 
@@ -42,16 +65,15 @@ function MapCallOutput({ mapCallOutput }) {
     const { lat, lng, location } = JSON.parse(mapCallOutput.arguments);
     
     if (lat && lng) {
-      Weather({ lat, lng, location });
+      Weather({ lat, lng, location, sendClientEvent});
     }
   }, [mapCallOutput?.arguments]);
 
 
-  return (
-    <div className="content-block map">
-      <div className="content-block-title">get_weather()</div>
+  return ( 
+    <div className="content-block map"><br/>      
       <div className="content-block-title bottom">
-        {marker?.location || 'not yet retrieved'}
+        {'Location: ' + marker?.location || 'noch nicht gekommen'}
         {!!marker?.temperature && (
           <>
             <br />
@@ -65,6 +87,7 @@ function MapCallOutput({ mapCallOutput }) {
           </>
         )}
       </div>
+      <br/>
       <div className="content-block-body full">
         {coords && (
           <WeatherMap
@@ -90,7 +113,6 @@ export default function MapPanel({
 
     const firstEvent = events[events.length - 1];
     if (!mapFunctionAdded && firstEvent.type === "session.created") {
-      sendClientEvent(mapSessionUpdate);
       setMapFunctionAdded(true);
     }
 
@@ -105,17 +127,8 @@ export default function MapPanel({
           output.name === "display_weather"
         ) {
           setMapFunctionCallOutput(output);
-          setTimeout(() => {
-            sendClientEvent({
-              type: "response.create",
-              response: {
-                instructions: `
-                describe the weather results you have provided.
-              `,
-              },
-            });
-          }, 500);
-        }
+                    
+          }
       });
     }
   }, [events]);
@@ -130,10 +143,10 @@ export default function MapPanel({
   return (
     <section className="h-full w-full flex flex-col gap-4">
       <div className="h-full bg-gray-50 rounded-md p-4">
-        <h2 className="text-lg font-bold">Wetter Tool</h2>
+        <h2 className="text-lg font-bold">☔️ Wetter Tool</h2>
         {isSessionActive ? (
           mapCallOutput ? (
-            <MapCallOutput mapCallOutput={mapCallOutput} />
+            <MapCallOutput sendClientEvent={sendClientEvent} mapCallOutput={mapCallOutput} />
           ) : (
             <p>Fragen Sie nach dem Wetter in einer Region, um die Informationen zu sehen.</p>
           )

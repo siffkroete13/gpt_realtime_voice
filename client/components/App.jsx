@@ -1,139 +1,122 @@
 import { useEffect, useRef, useState } from "react"; 
 import logo from "/assets/openai-logomark.svg";
-import EventLog from "./EventLog";
-import SessionControls from "./SessionControls";
+import EventLog from "./EventLog";  
+import SessionControls from "./SessionControls"  
 
-/*========================================== Funktionen importieren: */
-
-import TextPanel from "./TextPanel";
-import ColorPanel from "./ColorPanel";
-
-import MapPanel from "./MapPanel";
-import ParkhausPanel from "./ParkhausPanel";
-
-/* import MemoryPanel from "./MemoryPanel";
-import ImagePanel from "./ImagePanel"; */
+import TextPanel from "./TextPanel";  
+import ColorPanel from "./ColorPanel";  
+import MapPanel from "./MapPanel";  
+import ParkingPanel from "./ParkhausPanel";  
+import MemoryPanel from "./MemoryPanel";  
 
 export default function App() {
-  console.log('Hi Welt!!!!')
+  // Status-Hooks zum Verwalten des Sitzungsstatus, der Ereignisprotokolle und des Datenkanals
   const [isSessionActive, setIsSessionActive] = useState(false);
-  const [events, setEvents] = useState([]);
-  const [dataChannel, setDataChannel] = useState(null);
-  const peerConnection = useRef(null);
+  const [events, setEvents] = useState([]);  // Speichert die Ereignisse, die verarbeitet und angezeigt werden
+  const [dataChannel, setDataChannel] = useState(null);  // Hält den WebRTC-Datenkanal für die Kommunikation
+  const peerConnection = useRef(null);  // Erstellt einen Verweis für das RTCPeerConnection-Objekt
   const audioElement = useRef(null); 
 
-  async function addAudioTrackFromFile(pc, audioFileUrl) {
-    const audioCtx = new AudioContext();
-    const response = await fetch(audioFileUrl);
-    const arrayBuffer = await response.arrayBuffer();
-    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-    const source = audioCtx.createBufferSource();
-    source.buffer = audioBuffer;
-  
-    const destination = audioCtx.createMediaStreamDestination();
-    source.connect(destination);
-    source.start();
-  
-    const track = destination.stream.getAudioTracks()[0];
-    pc.addTrack(track);
-  }
 
-  
+  // ========================================================= Start der Sitzung und Herstellen der WebRTC-Verbindungen 
 
   async function startSession() {
-<<<<<<< HEAD
-    
-=======
-    // Get a session token for OpenAI Realtime API
->>>>>>> 059bf8d27a74b4d4e6e3d247ff6a484c2337e182
+    console.log("➵ Starting session.");
+
+    // Abrufen des Authentifizierungstokens vom Server, um sich mit der OpenAI-API zu authentifizieren
     const tokenResponse = await fetch("/token");
     const data = await tokenResponse.json();
-    const EPHEMERAL_KEY = data.client_secret.value; 
-  
+    const EPHEMERAL_KEY = data.client_secret.value;  // Extrahieren des Tokens 
+
+    // Erstellen eines neuen RTCPeerConnection-Objekts für WebRTC
     const pc = new RTCPeerConnection();
-  
+
+    // Erstellen eines Audioelements zum Abspielen der Remote-Audiospur
     audioElement.current = document.createElement("audio");
-    audioElement.current.autoplay = true;
-    pc.ontrack = (e) => (audioElement.current.srcObject = e.streams[0]);
-    
-    // Mikrofon durch Audio-Datei ersetzen:
-    await addAudioTrackFromFile(pc, '/assets/audio/mock-input.mp3');
-  
-    const dc = pc.createDataChannel("oai-events");
-    setDataChannel(dc);
-  
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-  
-    const baseUrl = "https://api.openai.com/v1/realtime";
-    const model = "gpt-4o-realtime-preview-2024-12-17";
+    audioElement.current.autoplay = true;  
+    pc.ontrack = (e) => (audioElement.current.srcObject = e.streams[0]);  // Einrichten des Audiostreams
+
+    // Erfassen die Mikrofoneingabe des lokalen Benutzers
+    const ms = await navigator.mediaDevices.getUserMedia({
+      audio: true,  
+    });
+    pc.addTrack(ms.getTracks()[0]);  // Hinzufügen der lokalen Audiospur zur Peer-Verbindung 
+
+    // Einrichten des Datenkanals für die Kommunikation mit dem Server
+    const dc = pc.createDataChannel("oai-events");  
+    setDataChannel(dc);  // Im Status-Hook speichern
+
+    // Start der WebRTC-Sitzung mit dem SDP-Protokoll
+    const offer = await pc.createOffer();  // Erstellen eines Angebots zum Starten der Verbindung
+    await pc.setLocalDescription(offer);  // Festlegen der lokalen Beschreibung 
+
+    const baseUrl = "https://api.openai.com/v1/realtime"; 
+    const model = "gpt-4o-realtime-preview-2024-12-17";  
     const sdpResponse = await fetch(`${baseUrl}?model=${model}`, {
-      method: "POST",
-      body: offer.sdp,
+      method: "POST",  
+      body: offer.sdp,  // Anhängen des SDP-Angebots an die Anfrage
       headers: {
-        Authorization: `Bearer ${EPHEMERAL_KEY}`,
-        "Content-Type": "application/sdp",
+        Authorization: `Bearer ${EPHEMERAL_KEY}`,  
+        "Content-Type": "application/sdp",  
       },
     });
-  
-    const answer = {
-      type: "answer",
-      sdp: await sdpResponse.text(),
-    };
 
-    console.log('Antwort eingetroffen')
-    await pc.setRemoteDescription(answer);
-  
-    peerConnection.current = pc;
+    const answer = {
+      type: "answer",  
+      sdp: await sdpResponse.text(),  
+    };
+    await pc.setRemoteDescription(answer);  
+
+    peerConnection.current = pc;  
   }
 
 
-  // Stop current session, clean up peer connection and data channel
+  // ============================================== Beenden der aktuellen Sitzung und Bereinigen von WebRTC-Verbindungen und dem Datenkanal
+
   function stopSession() {
+    console.log("➵ Stopping session.");
+
     if (dataChannel) {
-      dataChannel.close();
+      dataChannel.close(); 
     }
 
+    // Stopp der Sie alle Medienspuren (Audiospuren) von der Peer-Verbindung
     peerConnection.current.getSenders().forEach((sender) => {
       if (sender.track) {
-        sender.track.stop();
+        sender.track.stop();  
       }
     });
 
     if (peerConnection.current) {
-      peerConnection.current.close();
+      peerConnection.current.close(); 
     }
 
     setIsSessionActive(false);
-    setDataChannel(null);
+    setDataChannel(null); 
     peerConnection.current = null;
   }
 
-  // Send a message to the model
+
+  // =============================================================== Funktion zum Senden von Ereignissen an das Modell über den Datenkanal
+
   function sendClientEvent(message) {
-    console.log('Send client event aufgerufen')
+    console.log("➵ Sending client event:", message);
+
     if (dataChannel) {
-      const timestamp = new Date().toLocaleTimeString();
-      message.event_id = message.event_id || crypto.randomUUID();
-
-      // send event before setting timestamp since the backend peer doesn't expect this field
-      dataChannel.send(JSON.stringify(message));
-
-      // if guard just in case the timestamp exists by miracle
-      if (!message.timestamp) {
-        message.timestamp = timestamp;
-      }
-      setEvents((prev) => [message, ...prev]);
+      message.event_id = message.event_id || crypto.randomUUID();  // Sicherstellen, dass jede Nachricht über eine eindeutige Ereignis-ID verfügt
+      dataChannel.send(JSON.stringify(message)); 
+      setEvents((prev) => [message, ...prev]);  // Add the message to the events log
     } else {
-      console.error(
-        "Failed to send message - no data channel available",
-        message,
-      );
+      console.error("〤 Failed to send message - no data channel available", message);  
     }
   }
 
-  // Send a text message to the model
-  function sendTextMessage(message) {
+
+  // =============================================================== Funktion zum Senden einer Textnachricht an das Modell
+
+  function sendTextMessage(text_message) {
+    console.log("➵ Sending text message:", text_message);
+
     const event = {
       type: "conversation.item.create",
       item: {
@@ -141,16 +124,19 @@ export default function App() {
         role: "user",
         content: [
           {
-            type: "input_text",
-            text: message,
+            type: "input_text", 
+            text: text_message,  
           },
         ],
       },
     };
 
-    sendClientEvent(event);
-    sendClientEvent({ type: "response.create" });
+    sendClientEvent(event); // Zuerst wird eine Textnachricht an das Model gesendet 
+    sendClientEvent({ type: "response.create" }); // Danach wird um eine Antwort gebeten
   }
+
+
+  // ================================================================== Werkzeugregistrierungen für verfügbare Funktionen
 
   const toolRegistrations = {
     type: "session.update",
@@ -159,7 +145,7 @@ export default function App() {
         {
           type: "function",
           name: "display_text",
-          description: "Call this function when a user asks for a text output; asks to display / write / show something.",
+          description: "Call this function when a user asks for a text output; asks to display / write something down. ",
           parameters: {
             type: "object",
             strict: true,
@@ -214,7 +200,7 @@ export default function App() {
         {
           type: "function",
           name: "display_parking_availability",
-          description: "Call this function to check parking availability in Basel.",
+          description: "Call this function to check parking availability in the place user specifies.",
           parameters: {
             type: "object",
             strict: true,
@@ -222,15 +208,19 @@ export default function App() {
               parkhausName: {
                 type: "string",
                 description: "Name of the parking facility (optional, if omitted returns all facilities).",
+                enum: ["Elisabethen", "Steinen", "Storchen", "Bad. Bahnhof",
+                         "Rebgasse", "Post Basel", "Centralbahn", "Bahnhof Süd",
+                         "Anfos", "Messe", "Europe", "Claramatte",
+                         "City", "Clarahuus", "Aeschen", "Kunstmuseum"],
                 nullable: true,
               },
             },
           },
         },
-        /*{
+        {
           type: "function",
           name: 'set_memory',
-          description: 'Saves important data about the user into memory.',
+          description: 'Call this function to memorise something the user would like you to memorise.',
           parameters: {
             type: 'object',
             properties: {
@@ -246,71 +236,87 @@ export default function App() {
             },
             required: ['key', 'value'],
           },
-        },*/       
+        },      
       ],
 
       tool_choice: "auto",
     },
   };
 
-  // Send tool registrations when session starts
+  // Registrieren von Werkzeugen mit dem Modell, wenn die Sitzung gestartet wird
   useEffect(() => {
     if (isSessionActive) {
-      sendClientEvent(toolRegistrations);
+      console.log("➵ Registering tools with the model.");
+      sendClientEvent(toolRegistrations);  
     }
   }, [isSessionActive]);
 
 
-  // Attach event listeners to the data channel when a new one is created
+  // ========================================================= Anfügen von Ereignis-Listenern an den Datenkanal, wenn ein neuer Listener erstellt wird
+
   useEffect(() => {
     if (dataChannel) {
-      // Append new server events to the list
+      // Anfügen neuer Serverereignisse an das Ereignisprotokoll
       dataChannel.addEventListener("message", (e) => {
-<<<<<<< HEAD
-        const eventData = JSON.parse(e.data);
-        console.log("Event vom Server erhalten:", eventData);
-
-        // ACHTUNG: prüfe explizit auf erkannte Texte oder Antworten!
-        if (eventData.type.includes("message") || eventData.type.includes("speech")) {
-          console.log("✅ Sprach- oder Text-Event:", eventData);
-        }
-
-        setEvents((prev) => [JSON.parse(e.data), ...prev]);
-=======
-        const event = JSON.parse(e.data);
-        if (!event.timestamp) {
-          event.timestamp = new Date().toLocaleTimeString();
-        }
-
-        setEvents((prev) => [event, ...prev]);
->>>>>>> 059bf8d27a74b4d4e6e3d247ff6a484c2337e182
+        console.log("➵ Received an event.");
+        setEvents((prev) => [JSON.parse(e.data), ...prev]); // Analysieren und Hinzufügen von Ereignisdaten zur Liste
       });
 
-      // Set session active when the data channel is opened
+      // Sitzung beim Öffnen des Datenkanals aktivieren
       dataChannel.addEventListener("open", () => {
-        console.log("DataChannel geöffnet");
-      
+        console.log("✓ Data channel opened. Session is active.");
         setIsSessionActive(true);
         setEvents([]);
       });
     }
   }, [dataChannel]);
 
+
+  // ======================================================== Initialisieren des Speichers zu Beginn der Sitzung, wenn er zuvor gespeichert wurde
+
+  useEffect(() => {
+    if (isSessionActive) {
+      const savedMemory = localStorage.getItem("ai_memory");  // Abrufen von Arbeitsspeicher aus localStorage
+
+      if (savedMemory) {
+        console.log("✓ Past memory restored:", savedMemory);
+
+        const memory_package = {
+          type: "conversation.item.create",
+          item: {
+            type: "message",
+            role: "user",
+            content: [
+              {
+                type: "input_text",
+                text: `Reminder: ${savedMemory}`,
+              },
+            ],
+          },
+        };
+
+        sendClientEvent(memory_package);
+      }
+    }
+  }, [isSessionActive]);
+
+  // ============================================================== HTML-Ausgabe und die Panel-Anrufung unten:
+
   return (
     <>
       <nav className="absolute top-0 left-0 right-0 h-16 flex items-center">
         <div className="flex items-center gap-4 w-full m-4 pb-2 border-0 border-b border-solid border-gray-200">
           <img style={{ width: "24px" }} src={logo} />
-          <h1>realtime console</h1>
+          <h1>Realtime Konsole</h1>
         </div>
       </nav>
       <main className="absolute top-16 left-0 right-0 bottom-0">
         <section className="absolute top-0 left-[580px] right-[750px] bottom-0 flex">
-          <section className="absolute top-0 left-0 right-0 bottom-32 px-4 overflow-y-auto">
+          <section className="absolute top-0 left-0 right-0 bottom-32 px-4 overflow-y-auto overflow-x-hidden">
             <EventLog events={events} />
           </section>
           <section className="absolute h-32 left-0 right-0 bottom-0 p-4">
-            <SessionControls
+            <SessionControls // Aufrufen einer Standardfunktion aus einem Panel und Übergeben der Varibalen
               startSession={startSession}
               stopSession={stopSession}
               sendClientEvent={sendClientEvent}
@@ -320,7 +326,7 @@ export default function App() {
             />
           </section>
         </section>
-        <section className="absolute top-0 w-[580px] bottom-0 p-4 pt-0 overflow-y-auto">
+        <section className="absolute top-0 w-[580px] bottom-0 p-4 pt-0 overflow-hidden">
           <TextPanel
             sendClientEvent={sendClientEvent}
             sendTextMessage={sendTextMessage}
@@ -328,15 +334,15 @@ export default function App() {
             isSessionActive={isSessionActive}
           />
         </section>
-        <section className="absolute top-0 w-[380px] right-0 bottom-[280px] p-4 pt-0 overflow-y-auto">
-          <ParkhausPanel
+        <section className="absolute top-0 w-[380px] right-0 bottom-[280px] p-4 pt-0 overflow-hidden">
+          <ParkingPanel
             sendClientEvent={sendClientEvent}
             sendTextMessage={sendTextMessage}
             events={events}
             isSessionActive={isSessionActive}
           />
         </section>   
-        <section className="absolute top-0 w-[380px] right-[370px] bottom-[380px] p-4 pt-0 overflow-y-auto">
+        <section className="absolute top-0 w-[380px] right-[370px] bottom-[440px] p-4 pt-0 overflow-hidden ">
           <MapPanel
             sendClientEvent={sendClientEvent}
             sendTextMessage={sendTextMessage}
@@ -345,7 +351,7 @@ export default function App() {
           />
         </section>
        
-         <section className="absolute bottom-0 w-[380px] right-0 top-[625px] p-4 pt-0 overflow-y-auto">
+         <section className="absolute bottom-0 w-[380px] right-0 top-[625px] p-4 pt-0 overflow-hidden">
          <ColorPanel
             sendClientEvent={sendClientEvent}
             sendTextMessage={sendTextMessage}
@@ -353,15 +359,17 @@ export default function App() {
             isSessionActive={isSessionActive}
           />
         </section> 
-        {/*<section className="absolute bottom-0 w-[380px] right-[370px] top-[525px] p-4 pt-0 overflow-y-auto">
-          <ImagePanel
+        <section className="absolute bottom-0 w-[380px] right-[370px] top-[465px] p-4 pt-0 overflow-hidden">
+          <MemoryPanel
             sendClientEvent={sendClientEvent}
             sendTextMessage={sendTextMessage}
             events={events}
             isSessionActive={isSessionActive}
           />
-        </section> */}
+        </section> 
       </main>
     </>
   );
 }
+
+// ✓ 〤 ➵

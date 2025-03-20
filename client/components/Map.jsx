@@ -19,7 +19,7 @@ function WeatherMap({ center, location }) {
   }, []);
 
   if (!LeafletComponents) {
-    return <div className="text-gray-500">Loading map...</div>;
+    return <div className="text-gray-500">Karte wird geladen...</div>;
   }
 
   const { MapContainer, TileLayer, Marker, Popup } = LeafletComponents;

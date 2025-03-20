@@ -1,10 +1,15 @@
 import { useEffect, useState } from "react";
 
 function TextCallOutput({ text }) {
-  return (
-    <div className="flex flex-col gap-2">
-      <p>KI-Ausgabe: {text}</p>
-    </div>
+  return ( 
+    <p
+      style={{
+        whiteSpace: "pre-wrap",  // Preserve whitespace and line breaks
+        wordBreak: "break-word",  // Prevent text from overflowing
+      }}
+    >
+      {text}
+    </p>  
   );
 }
 
@@ -19,11 +24,12 @@ export default function TextPanel({ isSessionActive, events }) {
       mostRecentEvent.response.output.forEach((output) => {
         if (output.type === "function_call" && output.name === "display_text") {
           try {
+            console.log("✓ JSON Response Received:", output.arguments);
             const { text } = JSON.parse(output.arguments);
             setTextCallOutputs((prev) => [...prev, text]); 
-            console.log("AI Response Received:", text);
+            console.log("✓ AI Response Received:", text);
           } catch (error) {
-            console.error("Error parsing AI response:", error);
+            console.error("〤 Error parsing AI response:", error);
           }
         }
       });
@@ -38,11 +44,11 @@ export default function TextPanel({ isSessionActive, events }) {
 
   return (
     <section className="h-full w-full flex flex-col gap-4">
-      <div className="h-full bg-gray-50 rounded-md p-4">
-        <h2 className="text-lg font-bold">Textausgabe</h2>
+      <div className="h-full bg-gray-50 rounded-md p-4 overflow-y-auto">
+        <h2 className="text-lg font-bold">✍️ Textausgabe</h2>
         {isSessionActive ? (
-          textCallOutputs.length > 0 ? (
-            textCallOutputs.map((text, index) => <TextCallOutput key={index} text={text} />)
+          textCallOutputs.length > 0 ? (            
+            textCallOutputs.map((text, index) => <TextCallOutput key={index} text={text} />)          
           ) : (
             <p>Bitten Sie darum, etwas aufzuschreiben, und es wird hier erscheinen.</p>
           )
