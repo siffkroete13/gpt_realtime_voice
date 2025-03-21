@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import "./ColorPanel.css"
 
 function ColorCallOutput({ theme, colors }) {
   return (
@@ -51,9 +52,9 @@ export default function ColorPanel({ isSessionActive, events }) {
   }, [isSessionActive]);
 
   return (
-    <section className="h-full w-full flex flex-col gap-4">
-      <div className="h-full bg-gray-50 rounded-md p-4">
-        <h2 className="text-lg font-bold">🎨 Farbpalette Tool</h2>
+    <section className="color-panel">
+      <div className="color-panel-inner">
+        <h2 className="color-panel-title">🎨 Farbpalette Tool</h2>
         {isSessionActive ? (
           colorPalette ? (
             <ColorCallOutput theme={colorPalette.theme} colors={colorPalette.colors} />

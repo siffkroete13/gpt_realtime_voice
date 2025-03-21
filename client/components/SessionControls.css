@@ -1,6 +1,5 @@
 
-
-  .session-controls {
-    height: 50px; /* oder was du brauchst */
+.session-controls {
+    height: 50px;
     flex-shrink: 0;
-  }
+}

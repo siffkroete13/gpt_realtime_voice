@@ -25,7 +25,7 @@ function WeatherMap({ center, location }) {
   const { MapContainer, TileLayer, Marker, Popup } = LeafletComponents;
 
   return (
-    <MapContainer center={center} zoom={10} style={{ height: "300px", width: "100%", borderRadius: "10px" }}>
+    <MapContainer class="map_container" center={center} zoom={10} style={{ height: "300px", width: "100%", borderRadius: "10px" }}>
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
