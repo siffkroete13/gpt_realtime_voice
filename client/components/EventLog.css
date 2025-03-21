@@ -1,0 +1,16 @@
+
+.event-log {
+    flex: 1;                     /* nimmt den restlichen Platz */
+    overflow-y: auto;            /* scrollfähig */
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-right: 8px;
+  }
+
+/* Styling für leeren Zustand */
+.event-placeholder {
+    color: #6b7280;        /* text-gray-500 */
+    font-size: 0.9rem;
+    padding: 4px;
+}

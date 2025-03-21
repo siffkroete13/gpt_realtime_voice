@@ -43,6 +43,7 @@
   /* ========== Hauptbereich (unterhalb der Navbar) ========== */
   .main-layout {
     display: flex;
+    height: calc(100% - 64px); /* Höhe der Navbar */
   }
 
 .left-panel,
@@ -53,28 +54,12 @@
   overflow-y: auto;
   border-right: 1px solid #ddd;
 }
-  
-  
-  
-  .event-log {
-    flex: 1;
-    padding: 16px;
-    overflow-y: auto;
-  }
-  
-  .session-controls {
-    height: 128px;
-    padding: 16px;
-    border-top: 1px solid #ddd;
-  }
-  
-  
-  .panel-item {
-    flex: 1;
+
+
+.center-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
     overflow: hidden;
-    border: 1px solid #ddd;
-    padding: 8px;
-    background-color: #fff;
-    border-radius: 4px;
   }
   

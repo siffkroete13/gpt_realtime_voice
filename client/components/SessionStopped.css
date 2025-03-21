@@ -1,0 +1,18 @@
+.session-stopped {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+  }
+  
+  /* Optional Button Styles (falls vom Button übernommen) */
+  .red {
+    background-color: #dc2626;
+    color: white;
+  }
+  
+  .gray {
+    background-color: #4b5563;
+    color: white;
+  }
