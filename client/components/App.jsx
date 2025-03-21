@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"; 
+import "./App.css"; // ✅ CSS direkt nach React importieren
 import logo from "/assets/openai-logomark.svg";
 import EventLog from "./EventLog";  
 import SessionControls from "./SessionControls"  
@@ -8,6 +9,7 @@ import ColorPanel from "./ColorPanel";
 import MapPanel from "./MapPanel";  
 import ParkingPanel from "./ParkhausPanel";  
 import MemoryPanel from "./MemoryPanel";  
+
 
 export default function App() {
   // Status-Hooks zum Verwalten des Sitzungsstatus, der Ereignisprotokolle und des Datenkanals
@@ -20,7 +22,7 @@ export default function App() {
 
   // ========================================================= Start der Sitzung und Herstellen der WebRTC-Verbindungen 
 
-  async function startSession() {
+  async function startSession({ audio = true } = {}) {
     console.log("➵ Starting session.");
 
     // Abrufen des Authentifizierungstokens vom Server, um sich mit der OpenAI-API zu authentifizieren
@@ -36,11 +38,11 @@ export default function App() {
     audioElement.current.autoplay = true;  
     pc.ontrack = (e) => (audioElement.current.srcObject = e.streams[0]);  // Einrichten des Audiostreams
 
-    // Erfassen die Mikrofoneingabe des lokalen Benutzers
-    const ms = await navigator.mediaDevices.getUserMedia({
-      audio: true,  
-    });
-    pc.addTrack(ms.getTracks()[0]);  // Hinzufügen der lokalen Audiospur zur Peer-Verbindung 
+    if (audio) {
+        // Erfassen die Mikrofoneingabe des lokalen Benutzers
+        const ms = await navigator.mediaDevices.getUserMedia({audio: true,  });
+        pc.addTrack(ms.getTracks()[0]);  // Hinzufügen der lokalen Audiospur zur Peer-Verbindung 
+    }
 
     // Einrichten des Datenkanals für die Kommunikation mit dem Server
     const dc = pc.createDataChannel("oai-events");  
@@ -303,73 +305,76 @@ export default function App() {
   // ============================================================== HTML-Ausgabe und die Panel-Anrufung unten:
 
   return (
-    <>
-      <nav className="absolute top-0 left-0 right-0 h-16 flex items-center">
-        <div className="flex items-center gap-4 w-full m-4 pb-2 border-0 border-b border-solid border-gray-200">
-          <img style={{ width: "24px" }} src={logo} />
-          <h1>Realtime Konsole</h1>
+  
+    <div className="app-container">
+        <nav className="navbar">
+        <div className="navbar-content">
+            <img src={logo} alt="OpenAI" className="logo" />
+            <h1>Realtime Konsole</h1>
         </div>
-      </nav>
-      <main className="absolute top-16 left-0 right-0 bottom-0">
-        <section className="absolute top-0 left-[580px] right-[750px] bottom-0 flex">
-          <section className="absolute top-0 left-0 right-0 bottom-32 px-4 overflow-y-auto overflow-x-hidden">
-            <EventLog events={events} />
-          </section>
-          <section className="absolute h-32 left-0 right-0 bottom-0 p-4">
-            <SessionControls // Aufrufen einer Standardfunktion aus einem Panel und Übergeben der Varibalen
-              startSession={startSession}
-              stopSession={stopSession}
-              sendClientEvent={sendClientEvent}
-              sendTextMessage={sendTextMessage}
-              events={events}
-              isSessionActive={isSessionActive}
-            />
-          </section>
-        </section>
-        <section className="absolute top-0 w-[580px] bottom-0 p-4 pt-0 overflow-hidden">
-          <TextPanel
-            sendClientEvent={sendClientEvent}
-            sendTextMessage={sendTextMessage}
-            events={events}
-            isSessionActive={isSessionActive}
-          />
-        </section>
-        <section className="absolute top-0 w-[380px] right-0 bottom-[280px] p-4 pt-0 overflow-hidden">
-          <ParkingPanel
-            sendClientEvent={sendClientEvent}
-            sendTextMessage={sendTextMessage}
-            events={events}
-            isSessionActive={isSessionActive}
-          />
-        </section>   
-        <section className="absolute top-0 w-[380px] right-[370px] bottom-[440px] p-4 pt-0 overflow-hidden ">
-          <MapPanel
-            sendClientEvent={sendClientEvent}
-            sendTextMessage={sendTextMessage}
-            events={events}
-            isSessionActive={isSessionActive}
-          />
-        </section>
-       
-         <section className="absolute bottom-0 w-[380px] right-0 top-[625px] p-4 pt-0 overflow-hidden">
-         <ColorPanel
-            sendClientEvent={sendClientEvent}
-            sendTextMessage={sendTextMessage}
-            events={events}
-            isSessionActive={isSessionActive}
-          />
-        </section> 
-        <section className="absolute bottom-0 w-[380px] right-[370px] top-[465px] p-4 pt-0 overflow-hidden">
-          <MemoryPanel
-            sendClientEvent={sendClientEvent}
-            sendTextMessage={sendTextMessage}
-            events={events}
-            isSessionActive={isSessionActive}
-          />
-        </section> 
-      </main>
-    </>
-  );
-}
+        </nav>
 
-// ✓ 〤 ➵
+        <main className="main-layout">
+        <aside className="left-panel">
+            <TextPanel
+            sendClientEvent={sendClientEvent}
+            sendTextMessage={sendTextMessage}
+            events={events}
+            isSessionActive={isSessionActive}
+            />
+        </aside>
+
+        <section className="center-panel">
+            <div className="event-log">
+            <EventLog events={events} />
+            </div>
+            <div className="session-controls">
+            <SessionControls
+                startSession={startSession}
+                stopSession={stopSession}
+                sendClientEvent={sendClientEvent}
+                sendTextMessage={sendTextMessage}
+                events={events}
+                isSessionActive={isSessionActive}
+            />
+            </div>
+        </section>
+
+        <aside className="right-panel">
+            <div className="panel-item">
+            <MapPanel
+                sendClientEvent={sendClientEvent}
+                sendTextMessage={sendTextMessage}
+                events={events}
+                isSessionActive={isSessionActive}
+            />
+            </div>
+            <div className="panel-item">
+            <ParkingPanel
+                sendClientEvent={sendClientEvent}
+                sendTextMessage={sendTextMessage}
+                events={events}
+                isSessionActive={isSessionActive}
+            />
+            </div>
+            <div className="panel-item">
+            <ColorPanel
+                sendClientEvent={sendClientEvent}
+                sendTextMessage={sendTextMessage}
+                events={events}
+                isSessionActive={isSessionActive}
+            />
+            </div>
+            <div className="panel-item">
+            <MemoryPanel
+                sendClientEvent={sendClientEvent}
+                sendTextMessage={sendTextMessage}
+                events={events}
+                isSessionActive={isSessionActive}
+            />
+            </div>
+        </aside>
+        </main>
+    </div>
+    );
+}

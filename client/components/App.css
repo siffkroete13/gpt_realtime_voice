@@ -1,0 +1,80 @@
+/* ========== Globales Reset & Basics ========== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  html, body, #root {
+    height: 100%;
+    font-family: Arial, sans-serif;
+    background-color: #efefef;
+    overflow: hidden;
+  }
+  
+  /* ========== App Layout ========== */
+  .app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  
+  /* ========== Navbar ========== */
+  .navbar {
+    height: 64px;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    background-color: white;
+    border-bottom: 1px solid #ccc;
+  }
+  
+  .navbar-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+  }
+  
+  .logo {
+    width: 24px;
+  }
+  
+  /* ========== Hauptbereich (unterhalb der Navbar) ========== */
+  .main-layout {
+    display: flex;
+  }
+
+.left-panel,
+.center-panel,
+.right-panel {
+  flex: 1; /* alle bekommen gleich viel Platz */
+  padding: 16px;
+  overflow-y: auto;
+  border-right: 1px solid #ddd;
+}
+  
+  
+  
+  .event-log {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+  }
+  
+  .session-controls {
+    height: 128px;
+    padding: 16px;
+    border-top: 1px solid #ddd;
+  }
+  
+  
+  .panel-item {
+    flex: 1;
+    overflow: hidden;
+    border: 1px solid #ddd;
+    padding: 8px;
+    background-color: #fff;
+    border-radius: 4px;
+  }
+  
