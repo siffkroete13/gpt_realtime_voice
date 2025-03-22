@@ -13,6 +13,12 @@ export default function SessionStopped({ startSession }) {
     startSession();
   }
 
+  function handleStartSessionWhitoutAudio() {
+    if (isActivating) return;
+    setIsActivating(true);
+    startSession({audio: false});
+  }
+
   return (
     <div className="session-stopped">
       <Button
@@ -20,8 +26,10 @@ export default function SessionStopped({ startSession }) {
         className={isActivating ? "gray" : "red"}
         icon={<CloudLightning height={16} />}
       >
-        {isActivating ? "Sitzung wird gestartet..." : "Sitzung starten"}
+        {isActivating ? "Sitzung wird gestartet..." : "Start Audio"}
       </Button>
+
+      
     </div>
   );
 }

@@ -23,6 +23,7 @@ export default function App() {
     // ========================================================= Start der Sitzung und Herstellen der WebRTC-Verbindungen 
 
     async function startSession({ audio = true } = {}) {
+        audio = false; // Für debug false
         console.log("➵ Starting session.");
 
         // Abrufen des Authentifizierungstokens vom Server, um sich mit der OpenAI-API zu authentifizieren
@@ -35,14 +36,25 @@ export default function App() {
 
         // Erstellen eines Audioelements zum Abspielen der Remote-Audiospur
         audioElement.current = document.createElement("audio");
-        audioElement.current.autoplay = true;  
-        pc.ontrack = (e) => (audioElement.current.srcObject = e.streams[0]);  // Einrichten des Audiostreams
+        audioElement.current.autoplay = true;
 
-        if (audio) {
-            // Erfassen die Mikrofoneingabe des lokalen Benutzers
-            const ms = await navigator.mediaDevices.getUserMedia({audio: true,  });
-            pc.addTrack(ms.getTracks()[0]);  // Hinzufügen der lokalen Audiospur zur Peer-Verbindung 
-        }
+        pc.ontrack = (e) => {
+            audioElement.current.srcObject = e.streams[0]; // Einrichten des Audiostreams
+          
+            // 🔧 Deine Hilfsmarkierung damit ich auch einen Event sehe wenn Audio kommt
+            const audioEvent = {
+              type: "media.track.start",
+              media: ["audio"],
+              timestamp: new Date().toISOString(),
+            };
+            setEvents((prev) => [audioEvent, ...prev]);
+        };  
+        
+        // Erfassen die Mikrofoneingabe des lokalen Benutzers
+        const ms = await navigator.mediaDevices.getUserMedia({audio: true,  });
+        if(!audio) ms.getAudioTracks()[0].enabled = false; // optional muten
+        pc.addTrack(ms.getTracks()[0]);  // Hinzufügen der lokalen Audiospur zur Peer-Verbindung 
+        
 
         // Einrichten des Datenkanals für die Kommunikation mit dem Server
         const dc = pc.createDataChannel("oai-events");  

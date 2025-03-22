@@ -25,6 +25,7 @@ export default function EventLog({ events }) {
       <Event
         key={event.event_id}
         event={event}
+        allEvents={events} // ⬅️ wichtig: gesamte Liste übergeben, eigentlich nicht nötig, nur für Fraben, also nur Luxus
         timestamp={new Date().toLocaleTimeString()}
       />,
     );

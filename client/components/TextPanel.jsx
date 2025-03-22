@@ -43,12 +43,12 @@ export default function TextPanel({ isSessionActive, events }) {
   }, [isSessionActive]);
 
   return (
-    <section className="h-full w-full flex flex-col gap-4">
-      <div className="h-full bg-gray-50 rounded-md p-4 overflow-y-auto">
-        <h2 className="text-lg font-bold">✍️ Textausgabe</h2>
+    <section className="text-panel">
+      <div className="text-panel-content">
+        <h2>✍️ Textausgabe</h2>
         {isSessionActive ? (
-          textCallOutputs.length > 0 ? (            
-            textCallOutputs.map((text, index) => <TextCallOutput key={index} text={text} />)          
+          textCallOutputs.length > 0 ? (
+            textCallOutputs.map((text, index) => <TextCallOutput key={index} text={text} />)
           ) : (
             <p>Bitten Sie darum, etwas aufzuschreiben, und es wird hier erscheinen.</p>
           )
@@ -58,4 +58,5 @@ export default function TextPanel({ isSessionActive, events }) {
       </div>
     </section>
   );
+  
 }
