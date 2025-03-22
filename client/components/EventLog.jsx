@@ -1,5 +1,3 @@
-import { ArrowUp, ArrowDown } from "react-feather";
-import { useState } from "react";
 import "./EventLog.css"
 
 import Event from "./Event.jsx"
