@@ -10,6 +10,14 @@ import MapPanel from "./MapPanel";
 import ParkingPanel from "./ParkhausPanel";  
 import MemoryPanel from "./MemoryPanel";  
 
+function createSilentAudioTrack() {
+    const ctx = new AudioContext();
+    const oscillator = ctx.createOscillator();
+    const dst = oscillator.connect(ctx.createMediaStreamDestination());
+    oscillator.start();
+    const track = dst.stream.getAudioTracks()[0];
+    return track;
+}
 
 export default function App() {
     // Status-Hooks zum Verwalten des Sitzungsstatus, der Ereignisprotokolle und des Datenkanals
@@ -22,9 +30,9 @@ export default function App() {
 
     // ========================================================= Start der Sitzung und Herstellen der WebRTC-Verbindungen 
 
-    async function startSession({ audio = true } = {}) {
-        audio = false; // Für debug false
-        console.log("➵ Starting session.");
+    async function startSession() {
+       
+        // console.log("➵ Starting session.");
 
         // Abrufen des Authentifizierungstokens vom Server, um sich mit der OpenAI-API zu authentifizieren
         const tokenResponse = await fetch("/token");
@@ -52,7 +60,6 @@ export default function App() {
         
         // Erfassen die Mikrofoneingabe des lokalen Benutzers
         const ms = await navigator.mediaDevices.getUserMedia({audio: true,  });
-        if(!audio) ms.getAudioTracks()[0].enabled = false; // optional muten
         pc.addTrack(ms.getTracks()[0]);  // Hinzufügen der lokalen Audiospur zur Peer-Verbindung 
         
 
@@ -79,10 +86,57 @@ export default function App() {
             type: "answer",  
             sdp: await sdpResponse.text(),  
         };
+
         await pc.setRemoteDescription(answer);  
 
         peerConnection.current = pc;  
     }
+
+    async function startTextOnlySession() {
+        // console.log("➵ Starting text-only session.");
+      
+        const tokenResponse = await fetch("/token");
+        const data = await tokenResponse.json();
+        const EPHEMERAL_KEY = data.client_secret.value;
+      
+        const pc = new RTCPeerConnection();
+      
+        // ✅ Stummen Track erzeugen und hinzufügen
+        const silentTrack = createSilentAudioTrack();
+        pc.addTrack(silentTrack);
+      
+        // 📡 Nur DataChannel – keine Audio-Spuren
+        const dc = pc.createDataChannel("oai-events");
+        setDataChannel(dc);
+      
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+      
+        const baseUrl = "https://api.openai.com/v1/realtime";
+        const model = "gpt-4o-realtime-preview-2024-12-17";
+        const sdpResponse = await fetch(`${baseUrl}?model=${model}`, {
+          method: "POST",
+          body: offer.sdp,
+          headers: {
+            Authorization: `Bearer ${EPHEMERAL_KEY}`,
+            "Content-Type": "application/sdp",
+          },
+        });
+      
+        const answer = {
+          type: "answer",
+          sdp: await sdpResponse.text(),
+        };
+      
+        try {
+          await pc.setRemoteDescription(answer);
+          peerConnection.current = pc;
+        } catch (err) {
+          console.error("✖️ Failed to set remote description:", err);
+          alert("❌ Text-only mode is not supported without an audio track. See console.");
+        }
+    }
+      
 
 
     // ============================================== Beenden der aktuellen Sitzung und Bereinigen von WebRTC-Verbindungen und dem Datenkanal
@@ -97,7 +151,7 @@ export default function App() {
         // Stopp der Sie alle Medienspuren (Audiospuren) von der Peer-Verbindung
         peerConnection.current.getSenders().forEach((sender) => {
             if (sender.track) {
-            sender.track.stop();  
+                sender.track.stop();  
             }
         });
 
@@ -114,7 +168,7 @@ export default function App() {
     // =============================================================== Funktion zum Senden von Ereignissen an das Modell über den Datenkanal
 
     function sendClientEvent(message) {
-        console.log("➵ Sending client event:", message);
+        // console.log("➵ Sending client event:", message);
 
         if (dataChannel) {
             message.event_id = message.event_id || crypto.randomUUID();  // Sicherstellen, dass jede Nachricht über eine eindeutige Ereignis-ID verfügt
@@ -129,7 +183,7 @@ export default function App() {
     // =============================================================== Funktion zum Senden einer Textnachricht an das Modell
 
     function sendTextMessage(text_message) {
-        console.log("➵ Sending text message:", text_message);
+        // console.log("➵ Sending text message:", text_message);
 
         const event = {
             type: "conversation.item.create",
@@ -260,7 +314,7 @@ export default function App() {
     // Registrieren von Werkzeugen mit dem Modell, wenn die Sitzung gestartet wird
     useEffect(() => {
         if (isSessionActive) {
-            console.log("➵ Registering tools with the model.");
+            // console.log("➵ Registering tools with the model.");
             sendClientEvent(toolRegistrations);  
         }
     }, [isSessionActive]);
@@ -272,15 +326,16 @@ export default function App() {
         if (dataChannel) {
             // Anfügen neuer Serverereignisse an das Ereignisprotokoll
             dataChannel.addEventListener("message", (e) => {
-            console.log("➵ Received an event.");
-            setEvents((prev) => [JSON.parse(e.data), ...prev]); // Analysieren und Hinzufügen von Ereignisdaten zur Liste
+                console.log("Data Channel Event bekommen");
+                setEvents((prev) => [JSON.parse(e.data), ...prev]); // Hinzufügen von Ereignisdaten zur Liste
             });
 
+           
             // Sitzung beim Öffnen des Datenkanals aktivieren
             dataChannel.addEventListener("open", () => {
-            console.log("✓ Data channel opened. Session is active.");
-            setIsSessionActive(true);
-            setEvents([]);
+                // console.log("✓ Data channel opened. Session is active.");
+                setIsSessionActive(true);
+                setEvents([]);
             });
         }
     }, [dataChannel]);
@@ -289,27 +344,26 @@ export default function App() {
     // ======================================================== Initialisieren des Speichers zu Beginn der Sitzung, wenn er zuvor gespeichert wurde
 
     useEffect(() => {
+        // localStorage.setItem("ai_memory", "Sprich bitte Deutsch mit mir.");
         if (isSessionActive) {
             const savedMemory = localStorage.getItem("ai_memory");  // Abrufen von Arbeitsspeicher aus localStorage
 
             if (savedMemory) {
-            console.log("✓ Past memory restored:", savedMemory);
-
-            const memory_package = {
-                type: "conversation.item.create",
-                item: {
-                type: "message",
-                role: "user",
-                content: [
-                    {
-                    type: "input_text",
-                    text: `Reminder: ${savedMemory}`,
+                const memory_package = {
+                    type: "conversation.item.create",
+                    item: {
+                        type: "message",
+                        role: "user",
+                        content: [
+                            {
+                            type: "input_text",
+                            text: `Reminder: ${savedMemory}`,
+                            },
+                        ],
                     },
-                ],
-                },
-            };
+                };
 
-            sendClientEvent(memory_package);
+                sendClientEvent(memory_package);
             }
         }
     }, [isSessionActive]);
@@ -342,6 +396,7 @@ export default function App() {
             
             <SessionControls
                 startSession={startSession}
+                startTextOnlySession={startTextOnlySession}
                 stopSession={stopSession}
                 sendClientEvent={sendClientEvent}
                 sendTextMessage={sendTextMessage}

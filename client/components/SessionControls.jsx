@@ -5,6 +5,7 @@ import "./SessionControls.css";
 
 export default function SessionControls({
   startSession,
+  startTextOnlySession,
   stopSession,
   sendClientEvent,
   sendTextMessage,
@@ -21,7 +22,10 @@ export default function SessionControls({
           serverEvents={serverEvents}
         />
       ) : (
-        <SessionStopped startSession={startSession} />
+        <SessionStopped 
+            startSession={startSession}
+            startTextOnlySession={startTextOnlySession}
+        />
       )}
     </div>
   );

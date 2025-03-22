@@ -4,7 +4,7 @@ import { CloudLightning } from "react-feather";
 import Button from "./Button";
 import "./SessionControls.css";
 
-export default function SessionStopped({ startSession }) {
+export default function SessionStopped({ startSession, startTextOnlySession}) {
   const [isActivating, setIsActivating] = useState(false);
 
   function handleStartSession() {
@@ -16,7 +16,7 @@ export default function SessionStopped({ startSession }) {
   function handleStartSessionWhitoutAudio() {
     if (isActivating) return;
     setIsActivating(true);
-    startSession({audio: false});
+    startTextOnlySession();
   }
 
   return (
@@ -27,6 +27,14 @@ export default function SessionStopped({ startSession }) {
         icon={<CloudLightning height={16} />}
       >
         {isActivating ? "Sitzung wird gestartet..." : "Start Audio"}
+      </Button>
+
+      <Button
+        onClick={handleStartSessionWhitoutAudio}
+        className={isActivating ? "gray" : "red"}
+        icon={<CloudLightning height={16} />}
+      >
+        {isActivating ? "Sitzung wird gestartet..." : "Start Text"}
       </Button>
 
       
