@@ -342,12 +342,10 @@ export default function App() {
 
     useEffect(() => {
         if (dataChannel) {
-            // Anfügen neuer Serverereignisse an das Ereignisprotokoll
             dataChannel.addEventListener("message", (e) => {
-                console.log("Data Channel Event bekommen");
+                // console.log("Data Channel Event bekommen: ", e);
                 putEvents(JSON.parse(e.data)); // Hinzufügen von Ereignisdaten zur Liste
             });
-
            
             // Sitzung beim Öffnen des Datenkanals aktivieren
             dataChannel.addEventListener("open", () => {

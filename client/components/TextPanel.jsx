@@ -19,7 +19,7 @@ function TranscriptOutput({entry}) {
             style={{
                 whiteSpace: "pre-wrap",
                 wordBreak: "break-word",
-                color: color,
+                color: entry.color,
                 marginBottom: "0.5rem",
                 fontStyle: "italic",
             }}
@@ -42,9 +42,9 @@ function extractTextOnFunctionCalling(e) {
                     console.log("✓ JSON Response Received:", output.arguments);
                     const { text } = JSON.parse(output.arguments); // Text wird extrahiert wenn function-call
                     result = text;
-                    console.log("✓ AI Response Received:", text);
+                    console.log("✓ AI Text Response Received:", text);
                 } catch (error) {
-                    console.error("〤 Error parsing AI response:", error);
+                    console.error("〤 Error parsing AI Text response:", error);
                 }
             }
         });
@@ -54,25 +54,81 @@ function extractTextOnFunctionCalling(e) {
 }
 
 function extractTranscript(e) {
-    const result = [];
+    let result = null;
 
-    // 🟢 Deine Eingaben
-    if (e.type === "conversation.item.create" && e.item?.role === "user") {
-        const text = e.item.content?.find(c => c.type === "input_text")?.text;
-        if (text) result.push({ who: "user", text, color: "green" });
+    // 1. conversation.item.create (Text von User, System, Assistant)
+    if (e.type === "conversation.item.create" && e.item?.content) {
+        const role = e.item.role;
+        const text = e.item.content.find(c => c.type === "input_text")?.text;
+        if (text) {
+            let color = "gray";
+            if (role === "user") color = "green";
+            else if (role === "assistant") color = "blue";
+            else if (role === "system") color = "orange";
+
+            result = { who: role, text, color };
+        }
     }
 
-    // 🟣 GPT Audioantwort (Transkript)
-    if (e.type === "response.audio_transcript.done" && e.transcript) {
-        result.push({ who: "assistant", text: e.transcript, color: "purple" });
+    // 2. response.audio_transcript.done
+    else if (e.type === "response.audio_transcript.done" && e.transcript) {
+        result = { who: "assistant", text: e.transcript, color: "purple" };
     }
 
-    // 🔵 GPT Textantwort (nicht über Transkript)
-    if (e.type === "response.output_item.done" && e.item?.role === "assistant") {
-        const transcript = e.item.content?.find(c => c.type === "audio")?.transcript;
-        const text = e.item.content?.find(c => c.type === "text")?.text;
-        if (transcript) result.push({ who: "assistant", text: transcript, color: "purple" });
-        if (text) result.push({ who: "assistant", text, color: "blue" });
+    // 3. response.content_part.done
+    else if (e.type === "response.content_part.done" && e.part?.transcript) {
+        result = { who: "assistant", text: e.part.transcript, color: "purple" };
+    }
+
+    // 4. response.output_item.done
+    else if (e.type === "response.output_item.done" && e.item?.role === "assistant") {
+        const audioTranscript = e.item.content?.find(c => c.type === "audio")?.transcript;
+        const textContent = e.item.content?.find(c => c.type === "text")?.text;
+
+        if (audioTranscript) {
+            result = { who: "assistant", text: audioTranscript, color: "purple" };
+        } else if (textContent) {
+            result = { who: "assistant", text: textContent, color: "blue" };
+        }
+    }
+
+    // 5. response.done mit inline content
+    else if (e.type === "response.done" && Array.isArray(e.response?.output)) {
+        e.response.output.forEach(item => {
+            if (item.role === "assistant" && Array.isArray(item.content)) {
+                item.content.forEach(contentItem => {
+                    if (contentItem.type === "audio" && contentItem.transcript) {
+                        result = { who: "assistant", text: contentItem.transcript, color: "purple" };
+                    } else if (contentItem.type === "text" && contentItem.text) {
+                        result = { who: "assistant", text: contentItem.text, color: "blue" };
+                    }
+                });
+            }
+        });
+    }
+
+    // ✅ 6. Funktion Call Event (von dir gewünscht)
+    else if (e.type === "conversation.item.created" && e.item?.type === "function_call") {
+        const functionName = e.item.name || "unknown_function";
+        const args = e.item.arguments || "";
+        const text = `function_calling: ${functionName}` + (args ? ` ${args}` : "");
+        result = { who: "user", text, color: "green" };
+    }
+
+    // ✅ 7. Optional: arguments received (wenn du auch das anzeigen willst)
+    else if (e.type === "response.function_call_arguments.done") {
+        const functionName = e.name || "unknown_function";
+        const args = e.arguments || "";
+        const text = `function_call_args: ${functionName} ${args}`;
+        result = { who: "user", text, color: "green" };
+    } 
+    // ✅ 8. Das ist die Bestätigung, dass GPT einen Tool-Call erfolgreich abgeschlossen hat.
+    else if (e.type === "response.output_item.done" && e.item?.type === "function_call") {
+        const functionName = e.item.name || "unknown_function";
+        const args = e.item.arguments || "";
+        const status = e.item.status || "done";
+        const text = `function_call (${status}): ${functionName} ${args}`;
+        result = { who: "assistant", text, color: "purple" };
     }
 
     return result;
@@ -124,17 +180,13 @@ export default function TextPanel({ isSessionActive, events }) {
 
                 <h2>✍️ Transcript-Ausgabe</h2>
                 {
-                    isSessionActive ? (
-                    
-                        transcriptOutputs.length > 0 ? (
-                            transcriptOutputs.map((entry, i) => <TranscriptOutput key={i} entry={entry} />)
-                        ) : (
-                            <p>Bitten Sie darum, etwas aufzuschreiben, und es wird hier erscheinen.</p>
-                        )
-
+                   
+                    transcriptOutputs.length > 0 ? (
+                        transcriptOutputs.map((entry, i) => <TranscriptOutput key={i} entry={entry} />)
                     ) : (
-                        <p>Starten Sie die Sitzung, um dieses Tool zu aktivieren.</p>
+                        <p>Hier sollten Audio-Transcriptions erscheinen</p>
                     )
+                    
                 }
             </div>
         </section>
