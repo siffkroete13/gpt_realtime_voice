@@ -4,8 +4,8 @@ function TextCallOutput({ text }) {
     return ( 
         <p
             style={{
-                whiteSpace: "pre-wrap",  // Preserve whitespace and line breaks
-                wordBreak: "break-word",  // Prevent text from overflowing
+                whiteSpace: "pre-wrap",     // Preserve whitespace and line breaks
+                wordBreak: "break-word",    // Prevent text from overflowing
             }}
         >
             {text}
@@ -13,7 +13,7 @@ function TextCallOutput({ text }) {
     );
 }
 
-function TranscriptOutput({ who, text, color }) {
+function TranscriptOutput({entry}) {
     return (
         <p
             style={{
@@ -23,13 +23,34 @@ function TranscriptOutput({ who, text, color }) {
                 marginBottom: "0.5rem",
                 fontStyle: "italic",
             }}
-            >
-            {who === "user" ? "🟢 Du: " : color === "purple" ? "🟣 GPT: " : "🔵 GPT: "}
+        >
+            {entry.who === "user" ? "🟢 Du:" : entry.color === "purple" ? "🟣 GPT:" : "🔵 GPT:"} {entry.text}
             {text}
         </p>
     );
 }
 
+function extractTextOnFunctionCalling(e) {
+    let result = '';
+
+    // Hier wird bei function_call => display_text der Text extrahiert
+    if (e.type === "response.done" && e.response.output) {
+        e.response.output.forEach((output) => {
+            if (output.type === "function_call" && output.name === "display_text") { // GPT möchte function_call?
+                try {
+                    console.log("✓ JSON Response Received:", output.arguments);
+                    const { text } = JSON.parse(output.arguments); // Text wird extrahiert wenn function-call
+                    result = text;
+                    console.log("✓ AI Response Received:", text);
+                } catch (error) {
+                    console.error("〤 Error parsing AI response:", error);
+                }
+            }
+        });
+    }
+
+    return result;
+}
 
 function extractTranscript(e) {
     const result = [];
@@ -63,28 +84,17 @@ export default function TextPanel({ isSessionActive, events }) {
     useEffect(() => {
         if (!events || events.length === 0) return;
 
-        
         const mostRecentEvent = events[0];
 
+        // Hier wird einerseits Text ausgegeben wenn GPT es möchte und andererseits die Transcription von Audio Dateien
+
         // Wenn GPT entscheidet, dass es die Funktion display_text aufrufen möchte, schickt es in einem response.done-Event einen function_call
-        if (mostRecentEvent.type === "response.done" && mostRecentEvent.response.output) {
-            mostRecentEvent.response.output.forEach((output) => {
-                if (output.type === "function_call" && output.name === "display_text") { // GPT möchte function_call?
-                    try {
-                        console.log("✓ JSON Response Received:", output.arguments);
-                        const { text } = JSON.parse(output.arguments);
-                        setTextCallOutputs((prev) => [...prev, text]); // Wenn GPT Text ausgeben möchte (per function_calling) dann geben wir Text aus
-                        console.log("✓ AI Response Received:", text);
-                    } catch (error) {
-                        console.error("〤 Error parsing AI response:", error);
-                    }
-                }
-            });
-        }
+        const text = extractTextOnFunctionCalling(mostRecentEvent);
+        if(text) setTextCallOutputs((prev) => [...prev, text]); // Wenn GPT Text ausgeben möchte (per function_calling) dann geben wir Text aus
 
         // Transcript ausgeben, voice wird ja transcripiert in Text und den möchten wir sehen, zumindest für debug
-        const transscript = extractTranscript(mostRecentEvent);
-        setTranscriptOutputs( (pre) => [...prev, transscript]);
+        const transcript = extractTranscript(mostRecentEvent);
+        if(transcript && transcript.text) setTranscriptOutputs( (prev) => [...prev, transcript]);
     }, [events]);
 
     useEffect(() => {
@@ -116,7 +126,7 @@ export default function TextPanel({ isSessionActive, events }) {
                     isSessionActive ? (
                     
                         transcriptOutputs.length > 0 ? (
-                            transcriptOutputs.map((who, text, color) => <TranscriptOutput who={who} text={text} color={color} />)
+                            transcriptOutputs.map((entry, i) => <TranscriptOutput key={i} entry={entry} />)
                         ) : (
                             <p>Bitten Sie darum, etwas aufzuschreiben, und es wird hier erscheinen.</p>
                         )
