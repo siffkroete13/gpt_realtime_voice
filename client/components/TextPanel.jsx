@@ -165,17 +165,13 @@ export default function TextPanel({ isSessionActive, events }) {
             <div className="text-panel-content">
                 <h2>✍️ Text-Ausgabe</h2>
                 {
-                    isSessionActive ? (
-                    
-                        textCallOutputs.length > 0 ? (
-                            textCallOutputs.map((text, index) => <TextCallOutput key={index} text={text} />)
-                        ) : (
-                            <p>Bitten Sie darum, etwas aufzuschreiben, und es wird hier erscheinen.</p>
-                        )
-
+                   
+                    textCallOutputs.length > 0 ? (
+                        textCallOutputs.map((text, index) => <TextCallOutput key={index} text={text} />)
                     ) : (
-                        <p>Starten Sie die Sitzung, um dieses Tool zu aktivieren.</p>
+                        <p>Bitten Sie darum, etwas aufzuschreiben, und es wird hier erscheinen.</p>
                     )
+                   
                 }
 
                 <h2>✍️ Transcript-Ausgabe</h2>
