@@ -24,8 +24,9 @@ function TranscriptOutput({entry}) {
                 fontStyle: "italic",
             }}
         >
-            {entry.who === "user" ? "🟢 Du:" : entry.color === "purple" ? "🟣 GPT:" : "🔵 GPT:"} {entry.text}
-            {text}
+            {entry.who === "user" ? "🟢 Du:" : entry.color === "purple" ? "🟣 GPT:" : "🔵 GPT:"} 
+            {entry.text}
+          
         </p>
     );
 }
