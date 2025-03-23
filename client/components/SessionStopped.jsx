@@ -28,15 +28,16 @@ export default function SessionStopped({ startSession, startTextOnlySession}) {
       >
         {isActivating ? "Sitzung wird gestartet..." : "Start Audio"}
       </Button>
-
-      <Button
+    
+    
+      {/* <Button
         onClick={handleStartSessionWhitoutAudio}
         className={isActivating ? "gray" : "red"}
         icon={<CloudLightning height={16} />}
       >
         {isActivating ? "Sitzung wird gestartet..." : "Start Text"}
-      </Button>
-
+      </Button> */}
+    
       
     </div>
   );

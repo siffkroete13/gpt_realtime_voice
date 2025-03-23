@@ -9,6 +9,7 @@ import ColorPanel from "./ColorPanel";
 import MapPanel from "./MapPanel";  
 import ParkingPanel from "./ParkhausPanel";  
 import MemoryPanel from "./MemoryPanel";  
+import EventTranscript from "./EventTranscript.jsx";
 
 function createSilentAudioTrack() {
     const ctx = new AudioContext();
@@ -22,11 +23,16 @@ function createSilentAudioTrack() {
 export default function App() {
     // Status-Hooks zum Verwalten des Sitzungsstatus, der Ereignisprotokolle und des Datenkanals
     const [isSessionActive, setIsSessionActive] = useState(false);
+    const eventsRef = useRef([]);
     const [events, setEvents] = useState([]);  // Speichert die Ereignisse, die verarbeitet und angezeigt werden
     const [dataChannel, setDataChannel] = useState(null);  // Hält den WebRTC-Datenkanal für die Kommunikation
     const peerConnection = useRef(null);  // Erstellt einen Verweis für das RTCPeerConnection-Objekt
     const audioElement = useRef(null); 
 
+    function putEvents(e) {
+        const parsed = typeof e === "string" ? JSON.parse(e) : e;
+        eventsRef.current.unshift(parsed);
+    }
 
     // ========================================================= Start der Sitzung und Herstellen der WebRTC-Verbindungen 
 
@@ -48,14 +54,15 @@ export default function App() {
 
         pc.ontrack = (e) => {
             audioElement.current.srcObject = e.streams[0]; // Einrichten des Audiostreams
-          
+            /*
             // 🔧 Deine Hilfsmarkierung damit ich auch einen Event sehe wenn Audio kommt
             const audioEvent = {
               type: "media.track.start",
               media: ["audio"],
               timestamp: new Date().toISOString(),
             };
-            setEvents((prev) => [audioEvent, ...prev]);
+            putEvents(audioEvent);
+            */
         };  
         
         // Erfassen die Mikrofoneingabe des lokalen Benutzers
@@ -150,9 +157,7 @@ export default function App() {
 
         // Stopp der Sie alle Medienspuren (Audiospuren) von der Peer-Verbindung
         peerConnection.current.getSenders().forEach((sender) => {
-            if (sender.track) {
-                sender.track.stop();  
-            }
+            sender?.track?.stop();
         });
 
         if (peerConnection.current) {
@@ -173,7 +178,7 @@ export default function App() {
         if (dataChannel) {
             message.event_id = message.event_id || crypto.randomUUID();  // Sicherstellen, dass jede Nachricht über eine eindeutige Ereignis-ID verfügt
             dataChannel.send(JSON.stringify(message)); 
-            setEvents((prev) => [message, ...prev]);  // Add the message to the events log
+            putEvents(message);  // Add the message to the events log
         } else {
             console.error("〤 Failed to send message - no data channel available", message);  
         }
@@ -192,8 +197,8 @@ export default function App() {
             role: "user",
             content: [
                 {
-                type: "input_text", 
-                text: text_message,  
+                    type: "input_text", 
+                    text: text_message,  
                 },
             ],
             },
@@ -311,6 +316,19 @@ export default function App() {
         },
     };
 
+    useEffect(() => {
+        const interval = setInterval(() => {
+          setEvents((currentEvents) => {
+            if (eventsRef.current.length !== currentEvents.length) {
+                return [...eventsRef.current];
+            }
+            return currentEvents;
+          });
+        }, 500);
+      
+        return () => clearInterval(interval);
+      }, []);
+
     // Registrieren von Werkzeugen mit dem Modell, wenn die Sitzung gestartet wird
     useEffect(() => {
         if (isSessionActive) {
@@ -327,7 +345,7 @@ export default function App() {
             // Anfügen neuer Serverereignisse an das Ereignisprotokoll
             dataChannel.addEventListener("message", (e) => {
                 console.log("Data Channel Event bekommen");
-                setEvents((prev) => [JSON.parse(e.data), ...prev]); // Hinzufügen von Ereignisdaten zur Liste
+                putEvents(JSON.parse(e.data)); // Hinzufügen von Ereignisdaten zur Liste
             });
 
            

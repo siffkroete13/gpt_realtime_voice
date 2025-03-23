@@ -3,55 +3,72 @@ import { ArrowUp, ArrowDown } from "react-feather";
 import { useState } from "react";
 import "./Event.css"; // oder eigenes CSS, wenn du trennst
 
+
 export function getEventColor(event) {
     const t = event.type;
   
-    // ✅ Funktion im Output (Tool-Aufruf durch GPT)
-    const isFunctionCall = event?.response?.output?.some?.((o) => o.type === "function_call");
+    // ✅ Nur grün, wenn im response.output ein function_call enthalten ist (z. B. bei response.done)
+    const isFunctionCall =
+      event?.response?.output?.some?.((o) => o.type === "function_call") ||
+      event?.item?.type === "function_call";
+  
     if (isFunctionCall) return "green";
   
-    // ✅ Farbzuordnung nach Event-Typ
+    // 🔀 Farbzuordnung nach event.type
     switch (t) {
-      case "response.done": return "#2196f3";                    // Blau
-      case "response.output_item.done": return "#4caf50";        // Grün
-      case "response.audio_transcript.done": return "#3f51b5";   // Dunkelblau
-      case "response.audio.done": return "#000000";              // Schwarz
-      case "response.audio_transcript.delta": return "#9c27b0";  // Lila
-      case "output_audio_buffer.started": return "#ff9800";      // Orange
-      case "response.content_part.done": return "#ffeb3b";       // Gelb
-      case "response.content_part.added": return "#ffc107";      // Gold
-      case "conversation.item.created": return "#607d8b";        // Grau-Blau
-      case "response.output_item.added": return "#03a9f4";       // Hellblau
-      case "rate_limits.updated": return "#795548";              // Braun
-      case "response.created": return "#00bcd4";                 // Cyan
-      case "media.track.start": return "orange";                 // Lokales Audio startet
-      default: return "gray";                                    // Unbekannt
+      case "response.done": return "#2196f3";
+      case "response.output_item.done":
+        // Prüfen ob item content audio ist
+        if (event?.item?.content?.some?.((c) => c.type === "audio")) return "#000000"; // Schwarz für Audio
+        if (event?.item?.content?.some?.((c) => c.type === "text")) return "#3f51b5";  // Blau für Text
+        return "#4caf50"; // Standard-Grün wenn nichts erkannt
+      case "response.audio_transcript.done": return "#3f51b5";
+      case "response.audio.done": return "#000000";
+      case "response.audio_transcript.delta": return "#9c27b0";
+      case "output_audio_buffer.started": return "#ff9800";
+      case "response.content_part.done": return "#ffeb3b";
+      case "response.content_part.added": return "#ffc107";
+      case "conversation.item.created": return "#607d8b";
+      case "response.output_item.added": return "#03a9f4";
+      case "rate_limits.updated": return "#795548";
+      case "response.created": return "#00bcd4";
+      case "media.track.start": return "orange";
+      default: return "gray";
     }
-}
+  }
 
 export default function Event({ event, timestamp }) {
     const [isExpanded, setIsExpanded] = useState(false);
     const isClient = event.event_id && !event.event_id.startsWith("event_");
+
+    // Zusatz: system-role bei Client-Events erkennen
+    const isSystemEvent = isClient && event?.item?.role === "system";
 
     const color = getEventColor(event); // 🎯 Farbcode bestimmen
 
     return (
         <div className="event-container" style={{ borderLeft: `4px solid ${color}` }}>
             <div
-            className="event-header"
-            onClick={() => setIsExpanded(!isExpanded)}
+                className="event-header"
+                onClick={() => setIsExpanded(!isExpanded)}
             >
-            {isClient ? (
-                <ArrowUp className="icon server" />
-            ) : (
-                <ArrowDown className="icon client" />
-            )}
-            <div className="event-meta">
-                {isClient ? "client:" : "server:"} {event.type} | {timestamp}
+                {isClient ? (
+                    isSystemEvent ? (
+                        <ArrowUp className="icon client-system" /> // dunkelgrün
+                    ) : (
+                        <ArrowUp className="icon client" /> // hellgrün
+                    )
+                ) : (
+                    <ArrowDown className="icon server" />
+                )}
+
+                <div className="event-meta">
+                    {isClient ? "client:" : "server:"} {event.type} | {timestamp}
+                </div>
             </div>
-            </div>
+
             <div className={`event-body ${isExpanded ? "expanded" : "collapsed"}`}>
-            <pre className="event-json">{JSON.stringify(event, null, 2)}</pre>
+                <pre className="event-json">{JSON.stringify(event, null, 2)}</pre>
             </div>
         </div>
     );

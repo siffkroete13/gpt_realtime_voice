@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { CloudOff, MessageSquare } from "react-feather";
 import Button from "./Button";
-import "./SessionControls.css";
+import "./SessionActive.css";
 
 export default function SessionActive({ stopSession, sendTextMessage }) {
   const [message, setMessage] = useState("");
