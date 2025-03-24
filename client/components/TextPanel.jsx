@@ -122,6 +122,7 @@ function extractTranscript(e) {
         const text = `function_call_args: ${functionName} ${args}`;
         result = { who: "user", text, color: "green" };
     } 
+
     // ✅ 8. Das ist die Bestätigung, dass GPT einen Tool-Call erfolgreich abgeschlossen hat.
     else if (e.type === "response.output_item.done" && e.item?.type === "function_call") {
         const functionName = e.item.name || "unknown_function";
@@ -165,24 +166,20 @@ export default function TextPanel({ isSessionActive, events }) {
             <div className="text-panel-content">
                 <h2>✍️ Text-Ausgabe</h2>
                 {
-                   
                     textCallOutputs.length > 0 ? (
                         textCallOutputs.map((text, index) => <TextCallOutput key={index} text={text} />)
                     ) : (
                         <p>Bitten Sie darum, etwas aufzuschreiben, und es wird hier erscheinen.</p>
                     )
-                   
                 }
 
                 <h2>✍️ Transcript-Ausgabe</h2>
                 {
-                   
                     transcriptOutputs.length > 0 ? (
                         transcriptOutputs.map((entry, i) => <TranscriptOutput key={i} entry={entry} />)
                     ) : (
                         <p>Hier sollten Audio-Transcriptions erscheinen</p>
                     )
-                    
                 }
             </div>
         </section>

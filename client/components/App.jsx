@@ -8,8 +8,8 @@ import TextPanel from "./TextPanel";
 import ColorPanel from "./ColorPanel";  
 import MapPanel from "./MapPanel";  
 import ParkingPanel from "./ParkhausPanel";  
-import MemoryPanel from "./MemoryPanel";  
-import EventTranscript from "./EventTranscript.jsx";
+import MemoryPanel from "./MemoryPanel"; 
+import MicRecorder from "./MicRecorder";
 
 function createSilentAudioTrack() {
     const ctx = new AudioContext();
@@ -20,6 +20,7 @@ function createSilentAudioTrack() {
     return track;
 }
 
+
 export default function App() {
     // Status-Hooks zum Verwalten des Sitzungsstatus, der Ereignisprotokolle und des Datenkanals
     const [isSessionActive, setIsSessionActive] = useState(false);
@@ -27,12 +28,43 @@ export default function App() {
     const [events, setEvents] = useState([]);  // Speichert die Ereignisse, die verarbeitet und angezeigt werden
     const [dataChannel, setDataChannel] = useState(null);  // Hält den WebRTC-Datenkanal für die Kommunikation
     const peerConnection = useRef(null);  // Erstellt einen Verweis für das RTCPeerConnection-Objekt
-    const audioElement = useRef(null); 
+
+    // Wenn Audio-File statt Micro
+    const [audioFile, setAudioFile] = useState(null);
+    const fileAudioTrack = useRef(null);
+    const audioElement = useRef(null);
+    const [canPlay, setCanPlay] = useState(false);
+    const audioFileElement = useRef(null);
 
     function putEvents(e) {
         const parsed = typeof e === "string" ? JSON.parse(e) : e;
         eventsRef.current.unshift(parsed);
     }
+
+    async function loadAudioFileToTrack(file) {
+        return new Promise((resolve, reject) => {
+            const audio = document.createElement("audio");
+            audio.src = URL.createObjectURL(file);
+            audio.crossOrigin = "anonymous";
+            audio.load();
+
+            audioFileElement.current = audio;
+    
+            audio.oncanplay = async () => {
+                const ctx = new AudioContext();
+                const source = ctx.createMediaElementSource(audio);
+                const dest = ctx.createMediaStreamDestination();
+                source.connect(dest);
+                source.connect(ctx.destination); // Optional: auch lokal hörbar
+    
+                const track = dest.stream.getAudioTracks()[0];
+                fileAudioTrack.current = track;
+                resolve(track);
+            };
+    
+            audio.onerror = () => reject("Fehler beim Laden der Audiodatei.");
+        });
+    }    
 
     // ========================================================= Start der Sitzung und Herstellen der WebRTC-Verbindungen 
 
@@ -54,21 +86,17 @@ export default function App() {
 
         pc.ontrack = (e) => {
             audioElement.current.srcObject = e.streams[0]; // Einrichten des Audiostreams
-            /*
-            // 🔧 Deine Hilfsmarkierung damit ich auch einen Event sehe wenn Audio kommt
-            const audioEvent = {
-              type: "media.track.start",
-              media: ["audio"],
-              timestamp: new Date().toISOString(),
-            };
-            putEvents(audioEvent);
-            */
         };  
         
-        // Erfassen die Mikrofoneingabe des lokalen Benutzers
-        const ms = await navigator.mediaDevices.getUserMedia({audio: true,  });
-        pc.addTrack(ms.getTracks()[0]);  // Hinzufügen der lokalen Audiospur zur Peer-Verbindung 
-        
+        let trackToUse;
+        if (fileAudioTrack.current) {
+            trackToUse = fileAudioTrack.current;
+        } else {
+            // Erfassen die Mikrofoneingabe des lokalen Benutzers
+            const ms = await navigator.mediaDevices.getUserMedia({ audio: true });
+            trackToUse = ms.getTracks()[0];
+        }
+        pc.addTrack(trackToUse);
 
         // Einrichten des Datenkanals für die Kommunikation mit dem Server
         const dc = pc.createDataChannel("oai-events");  
@@ -122,25 +150,25 @@ export default function App() {
         const baseUrl = "https://api.openai.com/v1/realtime";
         const model = "gpt-4o-realtime-preview-2024-12-17";
         const sdpResponse = await fetch(`${baseUrl}?model=${model}`, {
-          method: "POST",
-          body: offer.sdp,
-          headers: {
+            method: "POST",
+            body: offer.sdp,
+            headers: {
             Authorization: `Bearer ${EPHEMERAL_KEY}`,
-            "Content-Type": "application/sdp",
-          },
+                "Content-Type": "application/sdp",
+            },
         });
-      
+        
         const answer = {
-          type: "answer",
-          sdp: await sdpResponse.text(),
+            type: "answer",
+            sdp: await sdpResponse.text(),
         };
-      
+        
         try {
-          await pc.setRemoteDescription(answer);
-          peerConnection.current = pc;
+            await pc.setRemoteDescription(answer);
+            peerConnection.current = pc;
         } catch (err) {
-          console.error("✖️ Failed to set remote description:", err);
-          alert("❌ Text-only mode is not supported without an audio track. See console.");
+            console.error("✖️ Failed to set remote description:", err);
+            alert("❌ Text-only mode is not supported without an audio track. See console.");
         }
     }
       
@@ -390,10 +418,20 @@ export default function App() {
   
     <div className="app-container">
         <nav className="navbar">
-        <div className="navbar-content">
-            <img src={logo} alt="OpenAI" className="logo" />
-            <h1>Realtime Konsole</h1>
-        </div>
+            <div className="navbar-content">
+                <img
+                    src={logo}
+                    alt="OpenAI"
+                    className="logo"
+                    style={{
+                        width: "40px",
+                        height: "40px",
+                        objectFit: "contain",
+                        display: "inline-block"
+                    }}
+                />
+                <h1>Realtime Konsole</h1>
+            </div>
         </nav>
 
         <main className="main-layout">
@@ -404,6 +442,26 @@ export default function App() {
                 events={events}
                 isSessionActive={isSessionActive}
             />
+
+            <div className="audio-file">
+              
+                <label htmlFor="audio-upload">📂 Audio-Datei wählen</label>
+                <input
+                    id="audio-upload"
+                    type="file"
+                    accept="audio/*"
+                    onChange={async (e) => {
+                            const file = e.target.files[0];
+                            if (file) {
+                                setAudioFile(file);
+                                await loadAudioFileToTrack(file);
+                                setCanPlay(true);
+                            }
+                        }
+                    }
+                />
+
+            </div>
         </aside>
 
         <section className="center-panel">
@@ -455,6 +513,21 @@ export default function App() {
                 isSessionActive={isSessionActive}
             />
             </div>
+
+            {canPlay && (
+                <button className="button play-audio" onClick={() => {
+                    if (audioFileElement.current) {
+                        audioFileElement.current.play();
+                    } else {
+                        alert("Kein Audio geladen.");
+                    }
+                }}>
+                    ▶️ Wiedergabe starten
+                </button>
+            )}
+
+            <MicRecorder/>
+           
         </aside>
         </main>
     </div>

@@ -18,26 +18,26 @@ export function getEventColor(event) {
       event?.item?.type === "function_call";
   
     if (isFunctionCall) return "green";
-  
+    
     // 🔀 Farbzuordnung nach event.type
     switch (t) {
-      case "response.done": return "#2196f3";
-      case "response.output_item.done":
+        case "response.done": return "#2196f3";
+        case "response.output_item.done":
         if (event?.item?.content?.some?.((c) => c.type === "audio")) return "#000000";
         if (event?.item?.content?.some?.((c) => c.type === "text")) return "#3f51b5";
         return "#4caf50";
-      case "response.audio_transcript.done": return "#3f51b5";
-      case "response.audio.done": return "#000000";
-      case "response.audio_transcript.delta": return "#9c27b0";
-      case "output_audio_buffer.started": return "#ff9800";
-      case "response.content_part.done": return "#ffeb3b";
-      case "response.content_part.added": return "#ffc107";
-      case "conversation.item.created": return "#607d8b";
-      case "response.output_item.added": return "#03a9f4";
-      case "rate_limits.updated": return "#795548";
-      case "response.created": return "#00bcd4";
-      case "media.track.start": return "orange";
-      default: return "gray";
+        case "response.audio_transcript.done": return "#3f51b5";
+        case "response.audio.done": return "#000000";
+        case "response.audio_transcript.delta": return "#9c27b0";
+        case "output_audio_buffer.started": return "#ff9800";
+        case "response.content_part.done": return "#ffeb3b";
+        case "response.content_part.added": return "#ffc107";
+        case "conversation.item.created": return "#607d8b";
+        case "response.output_item.added": return "#03a9f4";
+        case "rate_limits.updated": return "#795548";
+        case "response.created": return "#00bcd4";
+        case "media.track.start": return "orange";
+        default: return "gray";
     }
 }
   
